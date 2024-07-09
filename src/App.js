@@ -9,7 +9,6 @@ const speechsdk = require('microsoft-cognitiveservices-speech-sdk');
 
 const APP_ID = process.env.REACT_APP_AGORA_APP_ID; // Replace with your Agora App ID
 const TOKEN = process.env.REACT_APP_AGORA_TOKEN; // Replace with your Agora temporary token
-console.log(TOKEN);
 
 export default function App() {
     const [displayText, setDisplayText] = useState('INITIALIZED: ready to test speech...');
@@ -60,9 +59,9 @@ export default function App() {
 
     async function leaveChannel() {
         if (client && joined) {
+            await client.unpublish([localTracks.audioTrack, localTracks.videoTrack]);
             localTracks.videoTrack.close();
             localTracks.audioTrack.close();
-            await client.unpublish([localTracks.audioTrack, localTracks.videoTrack]);
             await client.leave();
 
             setLocalTracks({ videoTrack: null, audioTrack: null });
@@ -195,13 +194,16 @@ export default function App() {
                         <i className="fas fa-phone-slash fa-lg mr-2" onClick={() => leaveChannel()}></i>
                         Leave Video Call.
                     </div>
+                    <div id="local-player" style={{ width: '80%', height: '200px' }}></div>
+                    {remoteUsers.map(user => (
+                        <div key={user.uid} id={`remote-player-${user.uid}`} style={{ width: '80%', height: '200px' }}></div>
+                    ))}
                 </div>
                 <div className="col-6 output-display rounded">
+                
+                </div>
+                <div className="input-display rounded mt-3">
                     <code>{displayText}</code>
-                    <div id="local-player" style={{ width: '100%', height: '200px' }}></div>
-                    {remoteUsers.map(user => (
-                        <div key={user.uid} id={`remote-player-${user.uid}`} style={{ width: '100%', height: '200px' }}></div>
-                    ))}
                 </div>
             </div>
         </Container>
