@@ -4,11 +4,14 @@ import { getTokenOrRefresh } from './token_util';
 import './custom.css';
 import { ResultReason } from 'microsoft-cognitiveservices-speech-sdk';
 import AgoraRTC from 'agora-rtc-sdk-ng';
+import axios from 'axios';
+
 
 const speechsdk = require('microsoft-cognitiveservices-speech-sdk');
 
 const APP_ID = process.env.REACT_APP_AGORA_APP_ID; // Replace with your Agora App ID
 const TOKEN = process.env.REACT_APP_AGORA_TOKEN; // Replace with your Agora temporary token
+const STT_TOKEN = await getTokenOrRefresh();
 
 export default function App() {
     const [displayText, setDisplayText] = useState('INITIALIZED: ready to test speech...');
@@ -17,6 +20,43 @@ export default function App() {
     const [localTracks, setLocalTracks] = useState({ videoTrack: null, audioTrack: null });
     const [joined, setJoined] = useState(false);
     const [remoteUsers, setRemoteUsers] = useState([]);
+    const [input, setInput] = useState('');
+    const [messages, setMessages] = useState([]);
+    const [isSubmit, setIsSubmit] = useState(false);
+    const messagesEndRef = useRef(null);
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    useEffect(() => {
+        scrollToBottom();
+      }, [messages]);
+
+    useEffect(() => {
+        if (isSubmit) {
+          handleSubmit();
+          setIsSubmit(false);
+        }
+      }, [isSubmit]);
+
+    const handleSubmit = async (event) => {
+        if (event) {
+            event.preventDefault();
+        }
+        const userMessage = { sender: 'user', text: input };
+        setMessages([...messages, userMessage]);
+        setInput('');
+
+        try {
+            const response = await axios.post('http://127.0.0.1:5000/chat', { prompt: input });
+            const botMessage = { sender: 'assistant', text: response.data };
+            setMessages([...messages, userMessage, botMessage]);
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    };
+
 
     useEffect(() => {
         const initClient = async () => {
@@ -33,8 +73,8 @@ export default function App() {
                     const remoteAudioTrack = user.audioTrack;
                     remoteAudioTrack.play();
                 }
-                
-                setRemoteUsers(prevUsers => prevUsers.find(u => u.uid === user.uid)? prevUsers : [...prevUsers, user]);
+
+                setRemoteUsers(prevUsers => prevUsers.find(u => u.uid === user.uid) ? prevUsers : [...prevUsers, user]);
             });
 
             agoraClient.on('user-unpublished', (user) => {
@@ -46,7 +86,7 @@ export default function App() {
 
     async function joinChannel() {
         if (client && !joined) {
-            const uid = await client.join(APP_ID, 'demo_channel', TOKEN, null);
+            await client.join(APP_ID, 'demo_channel', TOKEN, null);
             const [microphoneTrack, cameraTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
             await client.publish([microphoneTrack, cameraTrack]);
 
@@ -71,18 +111,19 @@ export default function App() {
     }
 
     async function sttFromMic() {
-        const tokenObj = await getTokenOrRefresh();
-        const speechConfig = speechsdk.SpeechConfig.fromAuthorizationToken(tokenObj.authToken, tokenObj.region);
-        speechConfig.speechRecognitionLanguage = 'en-US';
+        const speechConfig = speechsdk.SpeechConfig.fromAuthorizationToken(STT_TOKEN.authToken, STT_TOKEN.region);
+        const autoDetectConfig = speechsdk.AutoDetectSourceLanguageConfig.fromLanguages(['ja-JP', 'vi-VN', 'en-US']);
 
         const audioConfig = speechsdk.AudioConfig.fromDefaultMicrophoneInput();
-        const recognizer = new speechsdk.SpeechRecognizer(speechConfig, audioConfig);
+        const recognizer = speechsdk.SpeechRecognizer.FromConfig(speechConfig, autoDetectConfig, audioConfig);
 
         setDisplayText('speak into your microphone...');
 
         recognizer.recognizeOnceAsync(result => {
             if (result.reason === ResultReason.RecognizedSpeech) {
-                setDisplayText(`RECOGNIZED: Text=${result.text}`);
+                setDisplayText(result.text);
+                setInput(result.text);
+                setIsSubmit(true);
             } else {
                 setDisplayText('ERROR: Speech was cancelled or could not be recognized. Ensure your microphone is working properly.');
             }
@@ -91,7 +132,9 @@ export default function App() {
 
     async function textToSpeech() {
         const tokenObj = await getTokenOrRefresh();
-        const speechConfig = speechsdk.SpeechConfig.fromAuthorizationToken(tokenObj.authToken, tokenObj.region);
+        const speechConfig = speechsdk.AutoDetectSourceLanguageConfig
+                                    .fromLanguages(['ja-JP', 'vi-VN', 'en-US'])
+                                    .fromAuthorizationToken(tokenObj.authToken, tokenObj.region);
         const myPlayer = new speechsdk.SpeakerAudioDestination();
         updatePlayer(p => { p.p = myPlayer; return p; });
         const audioConfig = speechsdk.AudioConfig.fromSpeakerOutput(player.p);
@@ -161,14 +204,14 @@ export default function App() {
 
     return (
         <Container className="app-container">
-            <h1 className="display-4 mb-3">Speech and Video Call App</h1>
+            <h1 className="display-4 mb-3">Speaking to AI - Demo</h1>
 
             <div className="row main-container">
                 <div className="col-6">
                     <i className="fas fa-microphone fa-lg mr-2" onClick={() => sttFromMic()}></i>
-                    Convert speech to text from your mic.
+                    　Convert speech to text from your mic.
 
-                    <div className="mt-2">
+                    {/* <div className="mt-2">
                         <label htmlFor="audio-file"><i className="fas fa-file-audio fa-lg mr-2"></i></label>
                         <input
                             type="file"
@@ -185,22 +228,38 @@ export default function App() {
                     <div className="mt-2">
                         <i className="fas fa-volume-mute fa-lg mr-2" onClick={() => handleMute()}></i>
                         Pause/resume text to speech output.
-                    </div>
+                    </div> */}
                     <div className="mt-2">
                         <i className="fas fa-video fa-lg mr-2" onClick={() => joinChannel()}></i>
-                        Join Video Call.
+                        　Join Video Call.
                     </div>
                     <div className="mt-2">
                         <i className="fas fa-phone-slash fa-lg mr-2" onClick={() => leaveChannel()}></i>
-                        Leave Video Call.
+                        　Leave Video Call.
                     </div>
                     <div id="local-player" style={{ width: '80%', height: '200px' }}></div>
                     {remoteUsers.map(user => (
                         <div key={user.uid} id={`remote-player-${user.uid}`} style={{ width: '80%', height: '200px' }}></div>
                     ))}
                 </div>
-                <div className="col-6 output-display rounded">
-                
+                <div className="col-6 p-0 chat-window">
+                    <div className="messages">
+                        {messages.map((msg, index) => (
+                            <div key={index} className={`message ${msg.sender}`}>
+                                {msg.text}
+                            </div>
+                        ))}
+                        <div ref={messagesEndRef} />
+                    </div>
+                    <form id="inputForm" onSubmit={handleSubmit} className="input-form">
+                        <input
+                            type="text"
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            placeholder="Type your message..."
+                        />
+                        <button type="submit">Send</button>
+                    </form>
                 </div>
                 <div className="input-display rounded mt-3">
                     <code>{displayText}</code>
