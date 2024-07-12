@@ -131,15 +131,14 @@ export default function App() {
     }
 
     async function textToSpeech() {
-        const tokenObj = await getTokenOrRefresh();
-        const speechConfig = speechsdk.AutoDetectSourceLanguageConfig
-                                    .fromLanguages(['ja-JP', 'vi-VN', 'en-US'])
-                                    .fromAuthorizationToken(tokenObj.authToken, tokenObj.region);
+        const speechConfig = speechsdk.SpeechConfig.fromAuthorizationToken(STT_TOKEN.authToken, STT_TOKEN.region);
+        const autoDetectConfig = speechsdk.AutoDetectSourceLanguageConfig.fromLanguages(['ja-JP', 'vi-VN', 'en-US']);
+
         const myPlayer = new speechsdk.SpeakerAudioDestination();
         updatePlayer(p => { p.p = myPlayer; return p; });
         const audioConfig = speechsdk.AudioConfig.fromSpeakerOutput(player.p);
 
-        let synthesizer = new speechsdk.SpeechSynthesizer(speechConfig, audioConfig);
+        let synthesizer = speechsdk.SpeechSynthesizer.FromConfig(speechConfig, autoDetectConfig, audioConfig);
 
         const textToSpeak = 'This is an example of speech synthesis for a long passage of text. Pressing the mute button should pause/resume the audio output.';
         setDisplayText(`speaking text: ${textToSpeak}...`);
@@ -211,7 +210,7 @@ export default function App() {
                     <i className="fas fa-microphone fa-lg mr-2" onClick={() => sttFromMic()}></i>
                     　Convert speech to text from your mic.
 
-                    {/* <div className="mt-2">
+                    <div className="mt-2">
                         <label htmlFor="audio-file"><i className="fas fa-file-audio fa-lg mr-2"></i></label>
                         <input
                             type="file"
@@ -228,7 +227,7 @@ export default function App() {
                     <div className="mt-2">
                         <i className="fas fa-volume-mute fa-lg mr-2" onClick={() => handleMute()}></i>
                         Pause/resume text to speech output.
-                    </div> */}
+                    </div>
                     <div className="mt-2">
                         <i className="fas fa-video fa-lg mr-2" onClick={() => joinChannel()}></i>
                         　Join Video Call.

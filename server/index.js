@@ -63,9 +63,11 @@ app.post('/chat', async (req, res) => {
         // Convert text response to speech
         const speechConfig = speechsdk.SpeechConfig.fromSubscription(process.env.SPEECH_KEY, process.env.SPEECH_REGION);
         speechConfig.speechSynthesisLanguage = 'ja-JP';
+        speechConfig.speechSynthesisOutputFormat = speechsdk.SpeechSynthesisOutputFormat.Raw16Khz16BitMonoPcm;
+
         // Generate file name with timestamp using dateformat
         const timestamp = dateAndTime.format(new Date(), 'YYMMDD_HHmmss');
-        const audioFileName = `assistant_${timestamp}.wav`;
+        const audioFileName = `assistant_${timestamp}.pcm`;
         const audioConfig = speechsdk.AudioConfig.fromAudioFileOutput(path.join(__dirname, audioFileName));
 
         const synthesizer = new speechsdk.SpeechSynthesizer(speechConfig, audioConfig);
