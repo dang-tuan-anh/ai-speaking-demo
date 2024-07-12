@@ -4,6 +4,9 @@ const axios = require('axios');
 const bodyParser = require('body-parser');
 const pino = require('express-pino-logger')();
 const OpenAI = require('openai');
+const speechsdk = require('microsoft-cognitiveservices-speech-sdk');const fs = require('fs');
+const path = require('path');
+const dateAndTime = require('date-and-time');
 
 const app = express();
 app.use(bodyParser.json());
@@ -42,23 +45,44 @@ app.get('/api/get-speech-token', async (req, res, next) => {
 });
 
 app.post('/chat', async (req, res) => {
-    const userMessage = req.body.message;  // Lấy nội dung tin nhắn từ người dùng
+    const userMessage = req.body.message;
 
-    // Lưu tin nhắn của người dùng vào history
     history.push({
         role: 'user',
         content: userMessage
     });
 
-    // Tạo completion từ OpenAI với ngữ cảnh từ history và tin nhắn mới từ người dùng
     try {
         const response = await openai.chat.completions.create({
             model: 'gpt-4o',
             messages: buildMessageContext(history, userMessage)
         });
 
-        // Lưu phản hồi của hệ thống vào history
         const systemResponse = response.choices[0].message.content;
+
+        // Convert text response to speech
+        const speechConfig = speechsdk.SpeechConfig.fromSubscription(process.env.SPEECH_KEY, process.env.SPEECH_REGION);
+        speechConfig.speechSynthesisLanguage = 'ja-JP';
+        // Generate file name with timestamp using dateformat
+        const timestamp = dateAndTime.format(new Date(), 'YYMMDD_HHmmss');
+        const audioFileName = `assistant_${timestamp}.wav`;
+        const audioConfig = speechsdk.AudioConfig.fromAudioFileOutput(path.join(__dirname, audioFileName));
+
+        const synthesizer = new speechsdk.SpeechSynthesizer(speechConfig, audioConfig);
+        synthesizer.speakTextAsync(
+            systemResponse,
+            result => {
+                if (result) {
+                    console.log(`Speech synthesized to file: ${audioFileName}`);
+                }
+                synthesizer.close();
+            },
+            error => {
+                console.error(`Encountered an error: ${error}`);
+                synthesizer.close();
+            }
+        );
+
         history.push({
             role: 'system',
             content: systemResponse
