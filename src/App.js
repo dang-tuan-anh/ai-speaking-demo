@@ -49,7 +49,7 @@ export default function App() {
         setInput('');
 
         try {
-            const response = await axios.post('http://127.0.0.1:5000/chat', { prompt: input });
+            const response = await axios.post('/chat', { message: input });
             const botMessage = { sender: 'assistant', text: response.data };
             setMessages([...messages, userMessage, botMessage]);
         } catch (error) {
