@@ -24,3 +24,28 @@ export async function getTokenOrRefresh() {
         return { authToken: speechToken.slice(idx + 1), region: speechToken.slice(0, idx) };
     }
 }
+
+//server not implemented yet
+export async function getAgoraTokenOrRefresh() {
+    const cookie = new Cookie();
+    const agoraToken = cookie.get('agora-token');
+
+    if (agoraToken === undefined) {
+        try {
+            const res = await axios.get('/api/get-agora-token');
+            const token = res.data.token;
+            const region = res.data.region;
+            cookie.set('agora-token', region + ':' + token, {maxAge: 3600 * 24, path: '/'});
+
+            console.log('Aogra token fetched from back-end: ' + token);
+            return { authToken: token, region: region };
+        } catch (err) {
+            console.log(err.response.data);
+            return { authToken: null, error: err.response.data };
+        }
+    } else {
+        console.log('Aogra token fetched from cookie: ' + agoraToken);
+        const idx = agoraToken.indexOf(':');
+        return { authToken: agoraToken.slice(idx + 1), region: agoraToken.slice(0, idx) };
+    }
+}

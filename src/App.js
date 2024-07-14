@@ -87,21 +87,21 @@ export default function App() {
     async function joinChannel() {
         if (client && !joined) {
             await client.join(APP_ID, 'demo_channel', TOKEN, null);
-            const [microphoneTrack, cameraTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
-            await client.publish([microphoneTrack, cameraTrack]);
+            // const [microphoneTrack, cameraTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
+            // await client.publish([microphoneTrack, cameraTrack]);
 
-            cameraTrack.play('local-player');
+            // cameraTrack.play('local-player');
 
-            setLocalTracks({ videoTrack: cameraTrack, audioTrack: microphoneTrack });
+            // setLocalTracks({ videoTrack: cameraTrack, audioTrack: microphoneTrack });
             setJoined(true);
         }
     }
 
     async function leaveChannel() {
         if (client && joined) {
-            await client.unpublish([localTracks.audioTrack, localTracks.videoTrack]);
-            localTracks.videoTrack.close();
-            localTracks.audioTrack.close();
+            // await client.unpublish([localTracks.audioTrack, localTracks.videoTrack]);
+            // localTracks.videoTrack.close();
+            // localTracks.audioTrack.close();
             await client.leave();
 
             setLocalTracks({ videoTrack: null, audioTrack: null });
@@ -111,8 +111,9 @@ export default function App() {
     }
 
     async function sttFromMic() {
-        const speechConfig = speechsdk.SpeechConfig.fromAuthorizationToken(STT_TOKEN.authToken, STT_TOKEN.region);
-        const autoDetectConfig = speechsdk.AutoDetectSourceLanguageConfig.fromLanguages(['ja-JP', 'vi-VN', 'en-US']);
+        const tokenObj = await getTokenOrRefresh();
+        const speechConfig = speechsdk.SpeechConfig.fromAuthorizationToken(tokenObj.authToken, tokenObj.region);
+        const autoDetectConfig = speechsdk.AutoDetectSourceLanguageConfig.fromLanguages(['ja-JP']);
 
         const audioConfig = speechsdk.AudioConfig.fromDefaultMicrophoneInput();
         const recognizer = speechsdk.SpeechRecognizer.FromConfig(speechConfig, autoDetectConfig, audioConfig);
@@ -131,7 +132,8 @@ export default function App() {
     }
 
     async function textToSpeech() {
-        const speechConfig = speechsdk.SpeechConfig.fromAuthorizationToken(STT_TOKEN.authToken, STT_TOKEN.region);
+        const tokenObj = await getTokenOrRefresh();
+        const speechConfig = speechsdk.SpeechConfig.fromAuthorizationToken(tokenObj.authToken, tokenObj.region);
         const autoDetectConfig = speechsdk.AutoDetectSourceLanguageConfig.fromLanguages(['ja-JP', 'vi-VN', 'en-US']);
 
         const myPlayer = new speechsdk.SpeakerAudioDestination();
@@ -210,7 +212,7 @@ export default function App() {
                     <i className="fas fa-microphone fa-lg mr-2" onClick={() => sttFromMic()}></i>
                     　Convert speech to text from your mic.
 
-                    <div className="mt-2">
+                    <div className="mt-2" hidden>
                         <label htmlFor="audio-file"><i className="fas fa-file-audio fa-lg mr-2"></i></label>
                         <input
                             type="file"
@@ -220,21 +222,21 @@ export default function App() {
                         />
                         Convert speech to text from an audio file.
                     </div>
-                    <div className="mt-2">
+                    <div className="mt-2" hidden>
                         <i className="fas fa-volume-up fa-lg mr-2" onClick={() => textToSpeech()}></i>
                         Convert text to speech.
                     </div>
-                    <div className="mt-2">
+                    <div className="mt-2" hidden>
                         <i className="fas fa-volume-mute fa-lg mr-2" onClick={() => handleMute()}></i>
                         Pause/resume text to speech output.
                     </div>
                     <div className="mt-2">
                         <i className="fas fa-video fa-lg mr-2" onClick={() => joinChannel()}></i>
-                        　Join Video Call.
+                        　 {joined ? 'You are joining the clinic session.' : 'Join'}
                     </div>
                     <div className="mt-2">
                         <i className="fas fa-phone-slash fa-lg mr-2" onClick={() => leaveChannel()}></i>
-                        　Leave Video Call.
+                        　Leave
                     </div>
                     <div id="local-player" style={{ width: '80%', height: '200px' }}></div>
                     {remoteUsers.map(user => (

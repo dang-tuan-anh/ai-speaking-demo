@@ -67,7 +67,7 @@ app.post('/chat', async (req, res) => {
 
         // Generate file name with timestamp using dateformat
         const timestamp = dateAndTime.format(new Date(), 'YYMMDD_HHmmss');
-        const audioFileName = `assistant_${timestamp}.pcm`;
+        const audioFileName = `assistant_a1.pcm`;
         const audioConfig = speechsdk.AudioConfig.fromAudioFileOutput(path.join(__dirname, audioFileName));
 
         const synthesizer = new speechsdk.SpeechSynthesizer(speechConfig, audioConfig);
@@ -78,12 +78,32 @@ app.post('/chat', async (req, res) => {
                     console.log(`Speech synthesized to file: ${audioFileName}`);
                 }
                 synthesizer.close();
+                const aaa = __dirname + '/' + audioFileName;
+                console.log(aaa);
+                const destAudioFile = '/Users/dangtuananh/Projects/agora-server-gateway/demo/agora_rtc_sdk/example/out/test_data/a1.pcm';
+                fs.copyFile(aaa, destAudioFile, (err) => {
+                    if (err) {
+                        console.error(`Could not copy file: ${err}`);
+                    } else {
+                        console.log(`File copied to: ${destFile}`);
+                    }
+                });        
             },
             error => {
                 console.error(`Encountered an error: ${error}`);
                 synthesizer.close();
             }
         );
+        // Sao chép tệp đến thư mục đích
+        const destFile = '/Users/dangtuananh/Projects/agora-server-gateway/demo/agora_rtc_sdk/example/out/test_data/f1.h264';
+        const outputFile = '/Users/dangtuananh/Projects/agora-server-gateway/demo/jane_speak.h264';
+        fs.copyFile(outputFile, destFile, (err) => {
+            if (err) {
+                console.error(`Could not copy file: ${err}`);
+            } else {
+                console.log(`File copied to: ${destFile}`);
+            }
+        });
 
         history.push({
             role: 'system',
